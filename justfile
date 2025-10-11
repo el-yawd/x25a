@@ -7,3 +7,7 @@ build:
 # Execute the lexer and parser on every file in `inputs/`
 test-all:
     ./scripts/run_tests.sh
+
+# Get grammar pdf
+grammar:
+    typst compile docs/grammar.typ grammar.pdf

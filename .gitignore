@@ -3,4 +3,5 @@
 **/*.pdf
 lexer
 parser
-build/**
+build/
+test-outputs/
