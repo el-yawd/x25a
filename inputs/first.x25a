@@ -1,12 +1,11 @@
-[2º exemplo: lê 2 valores e apresenta o maior valor]
-LEIA a,
-LEIA b,
-SE a < b ENTÃO
-ESCREVA b, [apresenta o maior “b”]
-SENÃO
-SE b < a ENTÃO
-ESCREVA a, [apresenta o maior “a”]
-SENÃO
-ESCREVA ‘iguais’, [mensagem entre ‘...’]
-FIM
+[1º exemplo: calculo do fatorial de um número > 1]
+LEIA num,
+fat := num, [inteiro de entrada]
+SE 1 < num ENTÃO
+fat := 1,
+FAÇA
+fat := fat * num,
+num := num – 1,
+ENQUANTO 1 < num,
+ESCREVA fat, [apresenta o fatorial]
 FIM

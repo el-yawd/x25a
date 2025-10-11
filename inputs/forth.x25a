@@ -1,0 +1,14 @@
+[4º exemplo: calcula a média de uma série de números,
+obs.: a série de entrada encerra-se com valor zero.]
+tot := 0,
+n := 0,
+FAÇA
+ESCREVA ‘digite número: ’,
+LEIA x,
+n := n + 1,
+tot := tot + x,
+ENQUANTO 0 < x,
+med:= tot/x,
+ESCREVA ‘média =’,
+ESCREVA med,
+FIM

@@ -1,0 +1,15 @@
+[3º exemplo: menu para direcionar a recepção de um banco]
+FAÇA
+ESCREVA ‘digite opção:’,
+ESCREVA ‘1= caixa, 2= contratos’,
+LEIA op,
+SE op = 1 ENTÃO
+ESCREVA ‘1 : guichês 7 a 15’,
+op := 0,
+SENÃO
+SE op = 2 ENTÃO
+ESCREVA ‘2 : guichês 20 e 23’,
+op := 0,
+FIM
+FIM
+ENQUANTO 0 < op

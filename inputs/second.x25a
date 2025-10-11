@@ -1,0 +1,12 @@
+[2º exemplo: lê 2 valores e apresenta o maior valor]
+LEIA a,
+LEIA b,
+SE a < b ENTÃO
+ESCREVA b, [apresenta o maior “b”]
+SENÃO
+SE b < a ENTÃO
+ESCREVA a, [apresenta o maior “a”]
+SENÃO
+ESCREVA ‘iguais’, [mensagem entre ‘...’]
+FIM
+FIM
