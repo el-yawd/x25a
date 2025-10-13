@@ -78,8 +78,8 @@ int read_token(){
 }
 
 void syntax_error(const char* msg){
-    fprintf(stderr, "Syntax error: %s at token %s '%s'\n", msg,
-            (curtok.type==T_EOF)?"EOF":curtok.lexeme, curtok.lexeme);
+    fprintf(stderr, "Syntax error: %s at token '%s'\n", msg,
+            (curtok.type==T_EOF)?"EOF":curtok.lexeme);
     exit(1);
 }
 
@@ -88,7 +88,7 @@ void expect(TokenType t){
         if(!read_token()){ /* reached EOF unexpectedly */ }
     } else {
         char buf[128];
-        snprintf(buf, sizeof(buf), "Expected token %d, got %d", t, curtok.type);
+        snprintf(buf, sizeof(buf), "Expected token type %d, got %d", t, curtok.type);
         syntax_error(buf);
     }
 }
@@ -110,7 +110,13 @@ void parse_TERM();
 void parse_TERM_PRIME();
 void parse_FACTOR();
 
-/* Implementation follows grammar from earlier */
+/* Check if current token is a block terminator */
+int is_block_end(){
+    return curtok.type == T_KW_SENAO ||
+           curtok.type == T_KW_FIM ||
+           curtok.type == T_KW_ENQUANTO ||
+           curtok.type == T_EOF;
+}
 
 void parse_PROGRAM(){
     // DECL_LIST EOF
@@ -126,12 +132,18 @@ void parse_DECL_LIST(){
 }
 
 void parse_REST_DECLS(){
+    // Consume comma if present (but it's optional before block end)
     if(curtok.type == T_COMMA){
         expect(T_COMMA);
+        // Check if we're at a block terminator after comma
+        if(is_block_end()){
+            // Trailing comma before block end - allow it but don't continue
+            return;
+        }
         parse_DECL();
         parse_REST_DECLS();
     } else {
-        // epsilon
+        // epsilon - no more declarations
     }
 }
 
@@ -166,7 +178,7 @@ void parse_WRITE_ST(){
 }
 
 void parse_IF_ST(){
-    // KW_SE REL_EXPR KW_ENTAO DECL_LIST IF_ELSE_PART KW_FIM
+    // KW_SE REL_EXPR KW_ENTAO DECL_LIST [KW_SENAO DECL_LIST] KW_FIM
     expect(T_KW_SE);
     parse_REL_EXPR();
     expect(T_KW_ENTAO);

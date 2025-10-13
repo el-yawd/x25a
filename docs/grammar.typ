@@ -1,15 +1,39 @@
 #import "@preview/simplebnf:0.1.1": bnf, Prod, Or
+#set page(
+  margin: (y: 0.5cm),
+)
+#set align(center)
 
-== x25a's grammar
+
+== Students
+Diego Reis Fagundes Varella | 2022014641 \
+Thamires <todo>
+
+= x25a's grammar
 
 #bnf(
   Prod(
-    $e$,
-    annot: $sans("Expr")$,
+    $p$,
+    delim: $→$,
+    annot: $sans("Program")$,
     {
-      Or[$x$][_variable_]
-      Or[$λ x. e$][_abstraction_]
-      Or[$e$ $e$][_application_]
+      Or[$d$ EOF][_variable_]
+    },
+  ),
+  Prod(
+    $d$,
+    delim: $→$,
+    annot: $sans("Declaration")$,
+    {
+      Or[$d$ EOF][_variable_]
+    },
+  ),
+  Prod(
+    $d$,
+    delim: $→$,
+    annot: $sans("Declaration")$,
+    {
+      Or[$d$ EOF][]
     },
   ),
 )
