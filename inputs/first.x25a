@@ -5,7 +5,7 @@ SE 1 < num ENTÃO
 fat := 1,
 FAÇA
 fat := fat * num,
-num := num – 1,
+num := num - 1,
 ENQUANTO 1 < num,
 ESCREVA fat, [apresenta o fatorial]
 FIM
