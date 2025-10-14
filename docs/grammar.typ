@@ -7,7 +7,7 @@
 
 == Students
 Diego Reis Fagundes Varella | 2022014641 \
-Thamires <todo>
+Tamiris Batista Oliveira | 2022006443
 
 = x25a's grammar
 

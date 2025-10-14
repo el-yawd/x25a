@@ -22,6 +22,8 @@ typedef struct {
 
 FILE* infile;
 Token curtok;
+int error_count = 0;     // Track errors found
+int warning_count = 0;  // Track warnings separately
 
 TokenType str_to_ttype(const char* s){
     if(strcmp(s,"EOF")==0) return T_EOF;
@@ -77,19 +79,92 @@ int read_token(){
     return 1;
 }
 
+// Get human-readable token type name
+const char* token_type_name(TokenType t) {
+    switch(t) {
+        case T_EOF: return "EOF";
+        case T_KW_LEIA: return "LEIA";
+        case T_KW_ESCREVA: return "ESCREVA";
+        case T_KW_SE: return "SE";
+        case T_KW_ENTAO: return "ENTÃO";
+        case T_KW_SENAO: return "SENÃO";
+        case T_KW_FIM: return "FIM";
+        case T_KW_FACA: return "FAÇA";
+        case T_KW_ENQUANTO: return "ENQUANTO";
+        case T_ID: return "identifier";
+        case T_NUM: return "number";
+        case T_ASSIGN: return ":=";
+        case T_LT: return "<";
+        case T_EQ: return "=";
+        case T_PLUS: return "+";
+        case T_MINUS: return "-";
+        case T_TIMES: return "*";
+        case T_DIV: return "/";
+        case T_COMMA: return ",";
+        case T_LPAREN: return "(";
+        case T_RPAREN: return ")";
+        case T_STRING: return "string";
+        default: return "UNKNOWN";
+    }
+}
+
 void syntax_error(const char* msg){
-    fprintf(stderr, "Syntax error: %s at token '%s'\n", msg,
-            (curtok.type==T_EOF)?"EOF":curtok.lexeme);
-    exit(1);
+    error_count++;
+    fprintf(stderr, "\n[Error %d]: %s\n", error_count, msg);
+    if(curtok.type == T_EOF) {
+        fprintf(stderr, "  Found: EOF\n");
+    } else {
+        fprintf(stderr, "  Found: %s", token_type_name(curtok.type));
+        if(strlen(curtok.lexeme) > 0) {
+            fprintf(stderr, " '%s'", curtok.lexeme);
+        }
+        fprintf(stderr, "\n");
+    }
+    fprintf(stderr, "\n");
+}
+
+void syntax_warning(const char* msg){
+    warning_count++;
+    fprintf(stderr, "\n[Warning %d]: %s\n", warning_count, msg);
+    if(curtok.type == T_EOF) {
+        fprintf(stderr, "  Found: EOF\n");
+    } else {
+        fprintf(stderr, "  Found: %s", token_type_name(curtok.type));
+        if(strlen(curtok.lexeme) > 0) {
+            fprintf(stderr, " '%s'", curtok.lexeme);
+        }
+        fprintf(stderr, "\n");
+    }
+}
+
+// Panic mode recovery: skip tokens until synchronization point
+void panic_mode_recovery() {
+    fprintf(stderr, "  Recovery: Skipping to next synchronization point...\n\n");
+    
+    // Synchronization tokens: comma, structural keywords, EOF
+    while(curtok.type != T_EOF) {
+        if(curtok.type == T_COMMA || 
+           curtok.type == T_KW_FIM || 
+           curtok.type == T_KW_SENAO || 
+           curtok.type == T_KW_ENQUANTO) {
+            // Found sync point
+            if(curtok.type == T_COMMA) {
+                read_token();  // consume comma and continue
+            }
+            break;
+        }
+        if(!read_token()) break;  // consume token
+    }
 }
 
 void expect(TokenType t){
     if(curtok.type == t){
         if(!read_token()){ /* reached EOF unexpectedly */ }
     } else {
-        char buf[128];
-        snprintf(buf, sizeof(buf), "Expected token type %d, got %d", t, curtok.type);
+        char buf[256];
+        snprintf(buf, sizeof(buf), "Expected %s", token_type_name(t));
         syntax_error(buf);
+        panic_mode_recovery();  // Try to recover
     }
 }
 
@@ -121,8 +196,38 @@ int is_block_end(){
 void parse_PROGRAM(){
     // DECL_LIST EOF
     parse_DECL_LIST();
-    if(curtok.type != T_EOF) syntax_error("Expected EOF after program");
-    printf("Parse successful: input is syntactically correct.\n");
+    
+    // Generic error recovery: consume any unexpected tokens before EOF
+    while(curtok.type != T_EOF) {
+        warning_count++;
+        syntax_warning("Unexpected token at end of program");
+        
+        // Provide helpful hint based on token type
+        if(curtok.type == T_KW_FIM) {
+            fprintf(stderr, "  Hint: FIM is only used to close SE...ENTÃO blocks\n");
+        } else if(curtok.type == T_KW_SENAO) {
+            fprintf(stderr, "  Hint: SENÃO must be part of a SE...ENTÃO...SENÃO...FIM block\n");
+        } else if(curtok.type == T_KW_ENQUANTO) {
+            fprintf(stderr, "  Hint: ENQUANTO must be part of a FAÇA...ENQUANTO loop\n");
+        } else {
+            fprintf(stderr, "  Hint: Expected end of file after all declarations\n");
+        }
+        
+        fprintf(stderr, "  Recovery: Ignoring this token and continuing...\n");
+        
+        // Consume the unexpected token (panic mode recovery)
+        if(!read_token()) break;  // safety: avoid infinite loop
+    }
+    
+    // Report final results
+    printf("\n");
+    if(error_count == 0 && warning_count == 0) {
+        printf("✓ Parse successful: input is syntactically correct.\n");
+    } else if(error_count == 0) {
+        printf("⚠ Parse completed with %d warning(s) - syntax is acceptable.\n", warning_count);
+    } else {
+        printf("✗ Parse completed with %d error(s) and %d warning(s).\n", error_count, warning_count);
+    }
 }
 
 void parse_DECL_LIST(){
@@ -154,7 +259,10 @@ void parse_DECL(){
         case T_KW_ESCREVA: parse_WRITE_ST(); break;
         case T_KW_SE: parse_IF_ST(); break;
         case T_KW_FACA: parse_DO_WHILE_ST(); break;
-        default: syntax_error("Expected declaration (ID, LEIA, ESCREVA, SE, FACA)");
+        default: 
+            syntax_error("Expected declaration: assignment (ID), LEIA, ESCREVA, SE, or FAÇA");
+            panic_mode_recovery();
+            break;
     }
 }
 
@@ -172,9 +280,14 @@ void parse_READ_ST(){
 
 void parse_WRITE_ST(){
     expect(T_KW_ESCREVA);
-    if(curtok.type == T_ID) expect(T_ID);
-    else if(curtok.type == T_STRING) expect(T_STRING);
-    else syntax_error("ESCREVA expects ID or STRING");
+    if(curtok.type == T_ID) {
+        expect(T_ID);
+    } else if(curtok.type == T_STRING) {
+        expect(T_STRING);
+    } else {
+        syntax_error("ESCREVA expects an identifier or string literal");
+        panic_mode_recovery();
+    }
 }
 
 void parse_IF_ST(){
@@ -203,7 +316,11 @@ void parse_REL_EXPR(){
     parse_EXPR();
     if(curtok.type == T_LT || curtok.type == T_EQ){
         expect(curtok.type);
-    } else syntax_error("Expected relational operator '<' or '='");
+    } else {
+        syntax_error("Expected relational operator: '<' (less than) or '=' (equals)");
+        panic_mode_recovery();
+        return;
+    }
     parse_EXPR();
 }
 
@@ -254,16 +371,39 @@ void parse_FACTOR(){
         expect(T_RPAREN);
         return;
     }
-    syntax_error("Expected NUM, ID, or '('");
+    syntax_error("Expected expression factor: number, identifier, or '(' expression ')'");
+    panic_mode_recovery();
 }
 
 int main(int argc, char** argv){
-    if(argc < 2){ fprintf(stderr, "Usage: %s tokens.txt\n", argv[0]); return 1; }
+    if(argc < 2){ 
+        fprintf(stderr, "Usage: %s tokens.txt\n", argv[0]); 
+        fprintf(stderr, "  tokens.txt: file containing tokens generated by lexer\n");
+        return 1; 
+    }
+    
     infile = fopen(argv[1], "r");
-    if(!infile){ perror("fopen"); return 1; }
+    if(!infile){ 
+        fprintf(stderr, "Error: Cannot open file '%s'\n", argv[1]);
+        perror("fopen"); 
+        return 1; 
+    }
 
-    if(!read_token()){ fprintf(stderr, "No tokens\n"); return 1; }
+    if(!read_token()){ 
+        fprintf(stderr, "Error: No tokens found in input file\n"); 
+        fclose(infile);
+        return 1; 
+    }
+    
+    printf("=== Starting Syntax Analysis ===\n\n");
     parse_PROGRAM();
     fclose(infile);
-    return 0;
+    
+    printf("\n=== Summary ===\n");
+    printf("Errors: %d\n", error_count);
+    printf("Warnings: %d\n", warning_count);
+    printf("\n");
+    
+    // Return 0 for success, 1 for errors (warnings are OK)
+    return (error_count > 0) ? 1 : 0;
 }
