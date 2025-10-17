@@ -7,6 +7,10 @@
 #include <string.h>
 #include <ctype.h>
 
+// Global error/warning counters
+int error_count = 0;
+int warning_count = 0;
+
 typedef enum {
     T_EOF,
     T_KW_LEIA, T_KW_ESCREVA, T_KW_SE, T_KW_ENTAO, T_KW_SENAO, T_KW_FIM, T_KW_FACA, T_KW_ENQUANTO,
@@ -87,6 +91,16 @@ void emit(TokenType t, const char* lexeme) {
     else printf("%s\n", token_name(t));
 }
 
+void lexer_warning(const char* msg) {
+    warning_count++;
+    fprintf(stderr, "WARNING: %s\n", msg);
+}
+
+void lexer_error(const char* msg) {
+    error_count++;
+    fprintf(stderr, "ERROR: %s\n", msg);
+}
+
 int iequals(const char* a, const char* b){
     while(*a && *b){
         if(tolower((unsigned char)*a) != tolower((unsigned char)*b))
@@ -137,7 +151,11 @@ int main(int argc, char** argv){
     while(1){
         int status = utf8_next(f, utf8buf, &len, &cp);
         if(status == 0){ emit(T_EOF,NULL); break; }
-        if(status == -1){ fprintf(stderr,"Invalid UTF-8\n"); emit(T_ERROR,"utf8"); break; }
+        if(status == -1){
+            lexer_error("Invalid UTF-8 sequence");
+            emit(T_ERROR,"utf8");
+            continue; // Skip this character and continue
+        }
 
         // whitespace
         if(cp==' ' || cp=='\t' || cp=='\n' || cp=='\r') continue;
@@ -148,7 +166,11 @@ int main(int argc, char** argv){
             while(utf8_next(f, utf8buf, &len, &cp)){
                 if(cp==']'){ closed = 1; break; }
             }
-            if(!closed){ fprintf(stderr,"Unterminated comment\n"); emit(T_ERROR,"comment"); break; }
+            if(!closed){
+                lexer_error("Unterminated comment (missing ']')");
+                emit(T_ERROR,"comment");
+                // Continue parsing after EOF in comment
+            }
             continue;
         }
 
@@ -164,7 +186,11 @@ int main(int argc, char** argv){
                 }
             }
             lexeme[i]=0;
-            if(!closed){ fprintf(stderr,"Unterminated string\n"); emit(T_ERROR,"string"); break; }
+            if(!closed){
+                lexer_error("Unterminated string literal (missing closing quote)");
+                emit(T_ERROR,"string");
+                // Continue parsing after EOF in string
+            }
             emit(T_STRING, lexeme);
             continue;
         }
@@ -208,9 +234,10 @@ int main(int argc, char** argv){
 
             TokenType t = keyword_or_id(lexeme);
             if(t==T_ERROR){
-                fprintf(stderr,"Invalid identifier '%s'\n",lexeme);
+                lexer_error("Invalid identifier (must be 1-3 lowercase letters)");
+                fprintf(stderr, "  Found: '%s'\n", lexeme);
                 emit(T_ERROR,lexeme);
-                break;
+                continue; // Continue lexing after invalid identifier
             }
             emit(t, lexeme);
             continue;
@@ -225,9 +252,9 @@ int main(int argc, char** argv){
                 emit(T_ASSIGN, ":=");
             } else {
                 if(nextlen) fseek(f, -nextlen, SEEK_CUR);
-                fprintf(stderr,"':' not followed by '='\n");
+                lexer_error("':' must be followed by '=' (use ':=' for assignment)");
                 emit(T_ERROR,":");
-                break;
+                continue; // Continue lexing after invalid ':'
             }
             continue;
         }
@@ -243,13 +270,27 @@ int main(int argc, char** argv){
             case '(': emit(T_LPAREN, "("); break;
             case ')': emit(T_RPAREN, ")"); break;
             default:
-                fprintf(stderr, "Unexpected UTF-8 char (U+%04X)\n", cp);
-                emit(T_ERROR, NULL);
-                fclose(f);
-                return 1;
+                char msg[128];
+                snprintf(msg, sizeof(msg), "Unexpected character (U+%04X) - skipping", cp);
+                lexer_warning(msg);
+                fprintf(stderr, "  Character: ");
+                for(int i = 0; i < len; i++) {
+                    fprintf(stderr, "\\x%02X", utf8buf[i]);
+                }
+                fprintf(stderr, "\n");
+                // Don't emit token, just skip and continue
+                continue;
         }
     }
 
     fclose(f);
-    return 0;
+    
+    // Print summary
+    if(error_count > 0 || warning_count > 0) {
+        fprintf(stderr, "\n=== Lexical Analysis Summary ===\n");
+        fprintf(stderr, "Errors:   %d\n", error_count);
+        fprintf(stderr, "Warnings: %d\n", warning_count);
+    }
+    
+    return (error_count > 0) ? 1 : 0;
 }

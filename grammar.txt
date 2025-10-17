@@ -1,0 +1,53 @@
+<programa> ::= <sequencia_declaracoes>
+
+<sequencia_declaracoes> ::= <declaracao> | <declaracao> ',' <sequencia_declaracoes>
+
+<declaracao> ::= <atribuicao>
+               | <leitura>
+               | <escrita>
+               | <se>
+               | <faca_enquanto>
+               | <comentario>
+
+<atribuicao> ::= <identificador> ':=' <expressao_aritmetica>
+
+<leitura> ::= 'LEIA' <identificador>
+
+<escrita> ::= 'ESCREVA' <identificador>
+            | 'ESCREVA' <mensagem>
+
+<mensagem> ::= ''' <texto> '''
+
+<se> ::= 'SE' <expressao_booleana> 'ENTÃO' <sequencia_declaracoes> <parte_senao> 'FIM'
+
+<parte_senao> ::= ε
+                | 'SENÃO' <sequencia_declaracoes>
+
+<faca_enquanto> ::= 'FAÇA' <sequencia_declaracoes> 'ENQUANTO' <expressao_booleana>
+
+<expressao_booleana> ::= <expressao_aritmetica> '<' <expressao_aritmetica>
+                       | <expressao_aritmetica> '=' <expressao_aritmetica>
+
+<expressao_aritmetica> ::= <termo>
+                         | <expressao_aritmetica> '+' <termo>
+                         | <expressao_aritmetica> '-' <termo>
+
+<termo> ::= <fator>
+          | <termo> '*' <fator>
+          | <termo> '/' <fator>
+
+<fator> ::= <identificador>
+          | <constante>
+          | '(' <expressao_aritmetica> ')'
+
+<identificador> ::= <letra> | <letra> <letra> | <letra> <letra> <letra>
+
+<letra> ::= 'a' | 'b' | 'c' | ... | 'z'
+
+<constante> ::= <digito> | <constante> <digito>
+
+<digito> ::= '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
+
+<comentario> ::= '[' <texto> ']'
+
+<texto> ::= sequência de caracteres (exceto delimitadores específicos)

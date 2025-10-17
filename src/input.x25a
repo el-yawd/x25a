@@ -1,0 +1,26 @@
+[programa teste: lê n números, determina a média, o maior e o menor]
+tot := 0,
+ma := 0,
+me := 0,
+n := 0,
+FACA
+   ESCREVA 'digite numero; ',
+   LEIA x,
+   n := n + 1,
+   tot := tot + x,
+   SE x < me ENTAO
+        me := x,
+   SENAO
+      SE ma < x ENTAO
+            ma := x,
+      FIM
+   FIM
+   FIM
+ENQUANTO 0 < x,
+med := tot/n,
+ESCREVA 'media = ',
+ESCREVA med,
+ESCREVA 'maior = ',,
+ESCREVA ma,
+ESCREVA 'menor = ',
+ESCREVA me,

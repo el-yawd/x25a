@@ -329,7 +329,15 @@ void parse_REST_DECLS(SyncSet follow) {
             }
         }
     } else if (is_decl_start()) {
+        syntax_error("Expected comma before declaration");
         parse_DECL(follow | SYNC_COMMA | SYNC_DECL_START);
+        parse_REST_DECLS(follow);
+    }
+    // Handle double comma case
+    else if (curtok.type == T_COMMA) {
+        syntax_error("Double comma found");
+        fprintf(stderr, "  Hint: Remove the extra comma\n");
+        read_token(); // Skip the extra comma
         parse_REST_DECLS(follow);
     }
     // else: epsilon
@@ -406,6 +414,14 @@ void parse_DO_WHILE_ST(SyncSet follow){
     // FAÇA DECL_LIST ENQUANTO REL_EXPR
     expect(T_KW_FACA, "do-while loop");
     parse_DECL_LIST(SYNC_ENQUANTO);
+    
+    // Handle extra FIM tokens before ENQUANTO
+    while(curtok.type == T_KW_FIM) {
+        syntax_error("Extra FIM in FAÇA loop - skipping");
+        fprintf(stderr, "  Hint: FAÇA loops should not have FIM before ENQUANTO\n");
+        read_token(); // Skip the extra FIM
+    }
+    
     expect(T_KW_ENQUANTO, "FAÇA loop (must end with ENQUANTO condition)");
     parse_REL_EXPR(follow);
 }
