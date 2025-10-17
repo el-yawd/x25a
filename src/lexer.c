@@ -102,38 +102,24 @@ int is_alpha_cp(unsigned int cp) {
 }
 
 TokenType keyword_or_id(const char* s) {
-    // Accept both plain and accented versions
     if (iequals(s, "LEIA")) return T_KW_LEIA;
     if (iequals(s, "ESCREVA")) return T_KW_ESCREVA;
     if (iequals(s, "SE")) return T_KW_SE;
     if (iequals(s, "FIM")) return T_KW_FIM;
     if (iequals(s, "ENQUANTO")) return T_KW_ENQUANTO;
 
-    // Check SENÃO first (more specific)
-    if (iequals(s, "SENAO") || strcmp(s, "SENÃO") == 0 || strstr(s, "SENÃO"))
-        return T_KW_SENAO;
+    if (iequals(s, "SENAO") || iequals(s, "SENÃO")) return T_KW_SENAO;
+    if (iequals(s, "ENTAO") || iequals(s, "ENTÃO")) return T_KW_ENTAO;
+    if (iequals(s, "FACA") || iequals(s, "FAÇA")) return T_KW_FACA;
 
-    // Then check ENTÃO
-    if (iequals(s, "ENTAO") || strcmp(s, "ENTÃO") == 0 || strstr(s, "ENTÃO"))
-        return T_KW_ENTAO;
-
-    // FAÇA / FACA
-    if (iequals(s, "FACA") || strcmp(s, "FAÇA") == 0 || strstr(s, "FAÇA"))
-        return T_KW_FACA;
-
-    // Check if valid identifier: 1-3 lowercase ASCII letters only
+    // Validate identifier
     size_t len = strlen(s);
     if (len >= 1 && len <= 3) {
-        int valid_id = 1;
         for (size_t i = 0; i < len; i++) {
-            if (!(s[i] >= 'a' && s[i] <= 'z')) {
-                valid_id = 0;
-                break;
-            }
+            if (!(s[i] >= 'a' && s[i] <= 'z')) return T_ERROR;
         }
-        if (valid_id) return T_ID;
+        return T_ID;
     }
-
     return T_ERROR;
 }
 
